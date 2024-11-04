@@ -35,7 +35,6 @@
     <option value="user1">Pippi</option>
     <option value="user2">Tommy</option>
     <option value="user3">Annika</option>
-    @*@<option value="user4">Llama</option>*@
 </select>
 
 
@@ -54,6 +53,7 @@
     new User("Annika"),
     new User("Llama"),
     };
+
 
     public Chat mychat;
 
@@ -93,7 +93,7 @@
 
     // newInputMessage is saved to the database by the method generating and executing an SQL-string.
     // A prompt to Llama is posted with AddPrompt()
-    //Llamas response is displayed as a new chatmessage in the chatwindow.
+    // Llamas response is displayed as a new chatmessage in the chatwindow.
     public void AddInputMessage()
     {
         if (!string.IsNullOrWhiteSpace(newInputMessage))
