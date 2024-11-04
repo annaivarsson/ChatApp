@@ -1,0 +1,139 @@
+﻿@page "/llama"
+@using System.Text.Json;
+@using System.Text;
+@using System.Text.RegularExpressions;
+@using System.Data
+@rendermode InteractiveServer
+@*@inject HttpClientService HttpClientService*@
+@attribute [StreamRendering]
+
+<PageTitle>Llama</PageTitle>
+
+<h3>Llama</h3>
+
+
+<p>Here you can either get information on the local Llama model or ask Llama a question.</p>
+
+<button type="button" @onclick="DoStuff">Get Llama model information</button>
+@*<button type="button" @onclick="PostStuff">Send prompt to Llama</button>*@
+
+
+
+
+@*inputfält med instruktion. @bind binder värdet av inmatningsfältet till variabeln newPrompt i koden.
+    När användaren skriver något i fältet uppdateras newPrompt automatiskt.*@
+<input type="text" placeholder="Write your prompt to Llama" @bind="newPrompt" />
+<button @onclick="AddPrompt">Send prompt</button>
+
+
+
+@if (!string.IsNullOrEmpty(result))
+{
+    <p>Result:</p>
+    <pre>@result</pre>
+}
+
+
+
+
+@code {
+
+    public string? newPrompt;
+
+    public void AddPrompt()
+    {
+        if (!string.IsNullOrWhiteSpace(newPrompt))
+        {
+            PostStuff();
+            newPrompt = string.Empty;
+        }
+    }
+
+
+    private string? result;
+    private static HttpClient httpClient = new()
+        {
+            BaseAddress = new Uri("http://localhost:11434/"),
+            Timeout = TimeSpan.FromMinutes(5)
+        };
+
+
+    public async Task DoStuff()
+    {
+        await GetAsync(httpClient);
+    }
+
+    public async Task PostStuff()
+    {
+        await PostAsync(httpClient);
+    }
+
+
+    static async Task GetAsync(HttpClient httpClient)
+    {
+        try{
+            using HttpResponseMessage response = await httpClient.GetAsync("api/tags");
+            response.EnsureSuccessStatusCode();
+
+            string result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"{result}\n");
+        }
+        catch (Exception ex)
+        {
+            string result = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+
+    }
+
+
+    private async Task PostAsync(HttpClient httpClient)
+    {
+        using StringContent jsonContent = new(
+            JsonSerializer.Serialize(new
+            {
+                model = "llama2:latest",
+                prompt = $"{newPrompt}"
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        try
+        {
+            using HttpResponseMessage response = await httpClient.PostAsync("api/generate", jsonContent);
+            response.EnsureSuccessStatusCode();
+
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+
+            StringBuilder fullResponse = new();
+            string? line;
+
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(line);
+                if (apiResponse != null && !string.IsNullOrWhiteSpace(apiResponse.Response))
+                {
+                    fullResponse.AppendLine(apiResponse.Response.Trim());
+                }
+                var jsonDoc = JsonDocument.Parse(line);
+                var responseText = jsonDoc.RootElement.GetProperty("response").GetString();
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                {
+                    fullResponse.AppendLine(responseText.Trim());
+
+                }
+            }
+            result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
+            StateHasChanged();
+
+        }
+        catch (Exception ex)
+        {
+            result = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}

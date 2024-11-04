@@ -1,0 +1,42 @@
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+/bin/
+/obj/
+out/
+
+# Visual Studio Code files
+.vscode/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/**
+
+# Rider files
+.idea/
+
+# Local development files
+appsettings.Development.json
+appsettings.*.json
+secrets.json
+
+# Build output
+wwwroot/index.html
+wwwroot/css/app.css
+wwwroot/css/app.bundle.css
+wwwroot/js/app.js
+wwwroot/js/app.bundle.js
+
+# Logs
+*.log
+
+# Others
+.DS_Store
+Thumbs.db

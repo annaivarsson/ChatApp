@@ -1,0 +1,133 @@
+﻿@page "/chat"
+@using System.Data
+@rendermode InteractiveServer
+
+
+<PageTitle>Chat</PageTitle>
+
+<h3>Chat</h3>
+
+
+<div class="chat-messages">
+    
+
+    @*Loop som itererar över alla chattmeddelanden i mychat.Messages. 
+        För varje inputmessage skapas en ny <div class = "chat-message"> där meddelandet visas.
+        I chattfönstret visas inputmessage med datum, namn och message*@
+    @foreach (var inputmessage in mychat.Messages)
+    {
+        <div class="chat-message">
+            <span class="message-date">@inputmessage.Date:</span>
+            <span class="message-sender">@inputmessage.Sender.Name</span>
+            @inputmessage.TextMessage
+        </div>
+    }
+</div>
+
+
+@*inputfält med instruktion. @bind binder värdet av inmatningsfältet till variabeln newInputMessage i koden.
+    När användaren skriver något i fältet uppdateras newInputMessage automatiskt.*@
+<input type="text" placeholder="Write your message" @bind="newInputMessage" />
+<button @onclick="AddInputMessage">Send message</button>
+
+@*dropdown-meny där användaren kan välja användare
+    @bind=selectedUser binder den valda användaren till variabeln selectedUser. När användaren gör ett val uppdateras selectedUser automatiskt.
+*@
+
+@*funkar inte pga "NullReferenceException: Object reference not set to an instance of an object."*@
+@*@foreach (var user in selectedUser)
+{
+    <select @bind="selectedUser">
+        <option value="user1">Pippi</option>
+        <option value="user2">Tommy</option>
+        <option value="user3">Annika</option>
+    </select>
+}*@
+
+
+@*göra en foreach loop*@
+<select @bind="selectedUser">
+    <option value="user1">Pippi</option>
+    <option value="user2">Tommy</option>
+    <option value="user3">Annika</option>
+</select>
+
+
+
+@code {
+    // Chat- och Userinstanser skapas.
+    //Men Oliver vill att vi ska kommentera bort dem...
+    //Chat chat1 = new Chat();
+    User user1 = new User("Pippi");
+    User user2 = new User("Tommy");
+    User user3 = new User("Annika");
+    User user4 = new User("Llama");
+
+    public List<User> userList = new List<User>
+    {
+    new User("Pippi"),
+    new User("Tommy"),
+    new User("Annika"),
+    new User("Llama"),
+    };
+
+    public string? newInputMessage; // Nullable string som lagrar det meddelande som användaren skriver.
+    public string selectedUser = "user1"; // En sträng som lagrar den valda användaren i dropdown-menyn
+
+    public Chat mychat;
+
+    public int mychatId = 1;
+
+    protected override void OnInitialized()
+    {
+        userList = new List<User> { user1, user2, user3, user4 };
+        mychat = new Chat();
+        LoadData(mychatId);
+    }
+    public void LoadData(long chatId)
+    {
+        System.Data.DataTable dt = DataBase.Fetchmessages(chatId);
+
+        foreach (DataRow row in dt.Rows)
+        {
+            User user = new User(row["username"].ToString());
+
+            string TextMessage= row["message"].ToString();
+            User Sender = user;
+            long ChatID = Convert.ToInt64(row["chat_id"]);
+            DateTime Date = (DateTime)row["message_sent"];
+            string ChatName = row["chatname"].ToString(); 
+            Message messageFromRow = new Message(Sender, TextMessage, ChatName, ChatID, Date);
+            mychat.Messages.Add(messageFromRow);
+            mychat.Users.Add(user);
+        }    
+    }
+    
+
+
+    // Om newInputMessage inte är tomt eller innehåller space fortsätter koden.
+    public void AddInputMessage()
+    {
+        // 
+        if (!string.IsNullOrWhiteSpace(newInputMessage))
+        {
+            // beroende på val i dropdownmenyn avgörs vilken användare som skickar meddelandet
+            User currentUser = selectedUser == "user1" ? user1 :
+                               selectedUser == "user2" ? user2 :
+                               user3;
+            long mychatId = DataBase.CheckChatTable("mychat");
+            long userId = DataBase.CheckUserTable(currentUser.Name);
+
+            // CreateMessage()-metoden i mychat anropas och skapar då ett nytt meddelande.
+            mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
+
+
+            string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
+
+            DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
+
+                //inputfältet blir en tom sträng igen när meddelande har skickats.
+                newInputMessage = string.Empty;   
+            }
+        }
+        }

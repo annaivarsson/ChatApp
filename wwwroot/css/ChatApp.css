@@ -1,0 +1,67 @@
+﻿/* Grundläggande stil för hela sidan */
+body {
+    font-family: Arial, sans-serif;
+    background - color: #f0f0f5;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Stil för chattrubriken */
+h3 {
+    color: #333;
+}
+
+/* Container för chattmeddelandena */
+.chat - messages {
+    max - width: 600px;
+    margin: 0 auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background - color: #fff;
+    border - radius: 5px;
+    height: 300px;
+    overflow - y: auto; /* Gör att meddelanden blir scrollbara om de överstiger höjden */
+}
+
+/* Stil för varje meddelande */
+.chat - message {
+    padding: 8px;
+    margin: 5px 0;
+    background - color: #e6e6e6;
+    border - radius: 5px;
+    border: 1px solid #ddd;
+}
+
+/* Stil för datum och användarnamn */
+.chat - message.message - date {
+    font - weight:bold!important;
+}
+
+.chat - message.message - sender {
+    font - weight: bold!important;
+}
+
+
+/* Stil för inputfält och knapp */
+input[type = "text"] {
+    width: calc(100 % -110px);
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border - radius: 5px;
+    box - sizing: border - box;
+}
+
+button {
+    padding: 8px 15px;
+    margin - left: 10px;
+    background - color: #007bff;
+    color: white;
+    border: none;
+    border - radius: 5px;
+    cursor: pointer;
+}
+
+    button: hover {
+    background - color: #0056b3;
+    }

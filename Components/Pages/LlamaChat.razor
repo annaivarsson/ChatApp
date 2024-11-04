@@ -1,0 +1,230 @@
+﻿@page "/llamachat"
+@using System.Data
+@rendermode InteractiveServer
+@using System.Text.Json;
+@using System.Text;
+@using System.Text.RegularExpressions;
+@attribute [StreamRendering]
+
+<h3>LlamaChat</h3>
+
+<PageTitle>LlamaChat</PageTitle>
+
+
+<div class="chat-messages">
+    @*Iterates through all messages in mychat.Messages.
+    In the chatwindow inputmessage is displayed with date, name and message.*@
+    @foreach (var inputmessage in mychat.Messages)
+    {
+        <div class="chat-message">
+            <span class="message-date">@inputmessage.Date:</span>
+            <span class="message-sender">@inputmessage.Sender.Name</span>
+            @inputmessage.TextMessage
+        </div>
+    }
+</div>
+
+
+@*Input field with instructions. @bind binds the input field to newInputMessage.*@
+<input type="text" placeholder="Write your message to Llama" @bind="newInputMessage" />
+<button @onclick="AddInputMessage">Send message</button>
+
+
+@*Dropdown-menu where the user can choose a sender. Updates selectedUser with the chosen user.*@
+<select @bind="selectedUser">
+    <option value="user1">Pippi</option>
+    <option value="user2">Tommy</option>
+    <option value="user3">Annika</option>
+    @*@<option value="user4">Llama</option>*@
+</select>
+
+
+@code {
+
+    // Creates a list of users.
+    User user1 = new User("Pippi");
+    User user2 = new User("Tommy");
+    User user3 = new User("Annika");
+    User user4 = new User("Llama");
+
+    public List<User> userList = new List<User>
+    {
+    new User("Pippi"),
+    new User("Tommy"),
+    new User("Annika"),
+    new User("Llama"),
+    };
+
+    public Chat mychat;
+
+    public int mychatId = 1;
+
+    public string? newInputMessage; // Nullable string that saves user input.
+    public string selectedUser = "user1"; // A string that saves the selected user in the dropdown-menu.
+
+
+    // Method that is executed once when the component is first created. Initializes the chat by fetching previous messages. 
+    protected override void OnInitialized()
+    {
+        userList = new List<User> { user1, user2, user3, user4 };
+        mychat = new Chat();
+        LoadData(mychatId);
+    }
+
+    // Data is collected from the database and displayed in the chatwindow. Populates mychat.Messages with previous messages.
+    public void LoadData(long chatId)
+    {
+        System.Data.DataTable dt = DataBase.Fetchmessages(chatId);
+
+        foreach (DataRow row in dt.Rows)
+        {
+            User user = new User(row["username"].ToString());
+
+            string TextMessage = row["message"].ToString();
+            User Sender = user;
+            long ChatID = Convert.ToInt64(row["chat_id"]);
+            DateTime Date = (DateTime)row["message_sent"];
+            string ChatName = row["chatname"].ToString();
+            Message messageFromRow = new Message(Sender, TextMessage, ChatName, ChatID, Date);
+            mychat.Messages.Add(messageFromRow);
+            mychat.Users.Add(user);
+        }
+    }
+
+    // newInputMessage is saved to the database by the method generating and executing an SQL-string.
+    // A prompt to Llama is posted with AddPrompt()
+    //Llamas response is displayed as a new chatmessage in the chatwindow.
+    public void AddInputMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(newInputMessage))
+        {
+            // Depending on the choice in the dropdown-menu its decided which user who sends the message.
+            User currentUser = selectedUser == "user1" ? user1 :
+                               selectedUser == "user2" ? user2 :
+                               selectedUser == "user3" ? user3 :
+                               user4;
+            long mychatId = DataBase.CheckChatTable("mychat");
+            long userId = DataBase.CheckUserTable(currentUser.Name);
+
+            // CreateMessage() in mychat is called and creates a new message.
+            mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
+
+            string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
+
+            DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
+
+            AddPrompt();
+
+            // The inputfield is emptied when the message has been sent.
+            newInputMessage = string.Empty;
+        }
+    } 
+
+    public string? newPrompt;
+
+    // newInputMessage is posted to Llama with PostStuff() and a chat message is created from the result (answer) from Llama. 
+    // The result is also saved ion the database.
+    public async Task AddPrompt()
+    {
+        if (!string.IsNullOrWhiteSpace(newInputMessage))
+        {
+            await PostStuff();
+
+            long mychatId = DataBase.CheckChatTable("mychat");
+            long userId = DataBase.CheckUserTable(user4.Name);
+            
+
+            mychat.CreateMessage(user4, result, "mychat", mychatId, DateTime.Now);
+
+            StateHasChanged();
+
+            string generatedLlamaSqlString = DataBase.GenerateSqlString("mychat", user4.Name, result);
+            DataBase.RunTransaction(generatedLlamaSqlString, 4, result, mychatId);
+        }
+    }
+
+
+    private string? result;
+    private static HttpClient httpClient = new()
+        {
+            BaseAddress = new Uri("http://localhost:11434/"),
+            Timeout = TimeSpan.FromMinutes(5)
+        };
+
+    // Performs GET requests to the Llama API.
+    public async Task DoStuff()
+    {
+        await GetAsync(httpClient);
+    }
+
+    // Performs POST requests to the Llama API.
+    public async Task PostStuff()
+    {
+        await PostAsync(httpClient);
+    }
+
+    // Information about the Llama model is generated by this method 
+    static async Task GetAsync(HttpClient httpClient)
+    {
+        try
+        {
+            using HttpResponseMessage response = await httpClient.GetAsync("api/tags");
+            response.EnsureSuccessStatusCode();
+
+            string result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"{result}\n");
+        }
+        catch (Exception ex)
+        {
+            string result = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    // prompts is sent to LLama and a response is generated using this method.
+    private async Task PostAsync(HttpClient httpClient)
+    {
+        using StringContent jsonContent = new(
+            JsonSerializer.Serialize(new
+            {
+                model = "llama2:latest",
+                prompt = $"{newInputMessage}"
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        try
+        {
+            using HttpResponseMessage response = await httpClient.PostAsync("api/generate", jsonContent);
+            response.EnsureSuccessStatusCode();
+
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+
+            StringBuilder fullResponse = new();
+            string? line;
+
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                Console.WriteLine($"API response Line: {line}");
+                var jsonDoc = JsonDocument.Parse(line);
+                var responseText = jsonDoc.RootElement.GetProperty("response").GetString();
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                {
+                    fullResponse.AppendLine(responseText.Trim());
+                }
+            }
+            result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
+            Console.WriteLine($"Full Response after processing: {result}");
+            StateHasChanged();
+
+        }
+        catch (Exception ex)
+        {
+            result = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}
