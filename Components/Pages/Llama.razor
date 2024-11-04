@@ -4,7 +4,6 @@
 @using System.Text.RegularExpressions;
 @using System.Data
 @rendermode InteractiveServer
-@*@inject HttpClientService HttpClientService*@
 @attribute [StreamRendering]
 
 <PageTitle>Llama</PageTitle>
@@ -15,13 +14,8 @@
 <p>Here you can either get information on the local Llama model or ask Llama a question.</p>
 
 <button type="button" @onclick="DoStuff">Get Llama model information</button>
-@*<button type="button" @onclick="PostStuff">Send prompt to Llama</button>*@
 
 
-
-
-@*inputfält med instruktion. @bind binder värdet av inmatningsfältet till variabeln newPrompt i koden.
-    När användaren skriver något i fältet uppdateras newPrompt automatiskt.*@
 <input type="text" placeholder="Write your prompt to Llama" @bind="newPrompt" />
 <button @onclick="AddPrompt">Send prompt</button>
 
@@ -32,8 +26,6 @@
     <p>Result:</p>
     <pre>@result</pre>
 }
-
-
 
 
 @code {
