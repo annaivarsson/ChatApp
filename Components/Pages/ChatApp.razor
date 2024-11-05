@@ -19,45 +19,40 @@
     }
 </div>
 
+@if (!isUserNameSet)
+{
+    <div>
+        <input type="text" placeholder="Enter your username" @bind="newUserName" />
+        <button @onclick="SetUserName">"Set Username"</button>
+    </div>
+}
+else
+{
+    <div>
+        <input type="text" placeholder="Enter your username" @bind="newUserName" />
+        <button @onclick="SetUserName">Set Username</button>
+    </div>
+}
+
 
 <input type="text" placeholder="Write your message" @bind="newInputMessage" />
 <button @onclick="AddInputMessage">Send message</button>
 
-
-<select @bind="selectedUser">
-    <option value="user1">Pippi</option>
-    <option value="user2">Tommy</option>
-    <option value="user3">Annika</option>
-</select>
-
-
 @code {
-    User user1 = new User("Pippi");
-    User user2 = new User("Tommy");
-    User user3 = new User("Annika");
-    User user4 = new User("Llama");
-
-    public List<User> userList = new List<User>
-    {
-    new User("Pippi"),
-    new User("Tommy"),
-    new User("Annika"),
-    new User("Llama"),
-    };
-
-    public string? newInputMessage; 
-    public string selectedUser = "user1"; 
-
+    public string? newUserName;
+    public string? newInputMessage;
+    public bool isUserNameSet = false;
+    public User? currentUser;
     public Chat mychat;
-
     public int mychatId = 1;
+
 
     protected override void OnInitialized()
     {
-        userList = new List<User> { user1, user2, user3, user4 };
         mychat = new Chat();
         LoadData(mychatId);
     }
+
     public void LoadData(long chatId)
     {
         System.Data.DataTable dt = DataBase.Fetchmessages(chatId);
@@ -65,8 +60,7 @@
         foreach (DataRow row in dt.Rows)
         {
             User user = new User(row["username"].ToString());
-
-            string TextMessage= row["message"].ToString();
+            string TextMessage = row["message"].ToString();
             User Sender = user;
             long ChatID = Convert.ToInt64(row["chat_id"]);
             DateTime Date = (DateTime)row["message_sent"];
@@ -76,26 +70,31 @@
             mychat.Users.Add(user);
         }    
     }
-    
 
+
+    public void SetUserName()
+    {
+        if (!string.IsNullOrWhiteSpace(newUserName))
+        {
+            currentUser = new User(newUserName);
+            isUserNameSet = true;
+            newUserName = string.Empty;
+        }
+    }
 
     public void AddInputMessage()
     {
-        if (!string.IsNullOrWhiteSpace(newInputMessage))
+        if (currentUser != null && !string.IsNullOrWhiteSpace(newInputMessage))
         {
-            User currentUser = selectedUser == "user1" ? user1 :
-                               selectedUser == "user2" ? user2 :
-                               user3;
             long mychatId = DataBase.CheckChatTable("mychat");
             long userId = DataBase.CheckUserTable(currentUser.Name);
 
             mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
 
             string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
-
             DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
 
-                newInputMessage = string.Empty;   
+            newInputMessage = string.Empty;
         }
     }
 }

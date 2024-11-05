@@ -6,9 +6,9 @@
 @using System.Text.RegularExpressions;
 @attribute [StreamRendering]
 
-<h3>LlamaChat</h3>
-
 <PageTitle>LlamaChat</PageTitle>
+
+<h3>Chat with Llama</h3>
 
 
 <div class="chat-messages">
@@ -25,50 +25,50 @@
 </div>
 
 
-@*Input field with instructions. @bind binds the input field to newInputMessage.*@
-<input type="text" placeholder="Write your message to Llama" @bind="newInputMessage" />
-<button @onclick="AddInputMessage">Send message</button>
+<div>
+    <input type="text" placeholder="Enter your Username" @bind="newUserName" />
+    <button @onclick="SetUserName">Set Username</button>
+</div>
 
-
-@*Dropdown-menu where the user can choose a sender. Updates selectedUser with the chosen user.*@
-<select @bind="selectedUser">
-    <option value="user1">Pippi</option>
-    <option value="user2">Tommy</option>
-    <option value="user3">Annika</option>
-</select>
-
+@if (isUserNameSet)
+{
+    <div>
+        @*Input field with instructions. @bind binds the input field to newInputMessage.*@
+        <input type="text" placeholder="Enter your message" @bind="newInputMessage" />
+        <button @onclick="AddInputMessage">Send message</button>
+    </div>
+}
+else
+{
+    <p>Please enter a username to start chatting.</p>
+}
 
 @code {
-
-    // Creates user objects and a user list.
-    User user1 = new User("Pippi");
-    User user2 = new User("Tommy");
-    User user3 = new User("Annika");
     User user4 = new User("Llama");
-
-    public List<User> userList = new List<User>
-    {
-    new User("Pippi"),
-    new User("Tommy"),
-    new User("Annika"),
-    new User("Llama"),
-    };
-
-
+    public List<User> userList = new List<User>();
+    public string selectedUser;
     public Chat mychat;
-
     public int mychatId = 1;
+    public string? newUserName;
+    public string? newInputMessage;
+    public bool isUserNameSet = false;
+    public User? currentUser;
 
-    public string? newInputMessage; // Nullable string that saves user input.
-    public string selectedUser = "user1"; // A string that saves the selected user in the dropdown-menu.
 
-
-    // Method that is executed once when the component is first created. Initializes the chat by fetching previous messages. 
     protected override void OnInitialized()
     {
-        userList = new List<User> { user1, user2, user3, user4 };
         mychat = new Chat();
         LoadData(mychatId);
+    }
+
+    private void SetUserName()
+    {
+        if (!string.IsNullOrWhiteSpace(newUserName))
+        {
+            currentUser = new User(newUserName);
+            isUserNameSet = true;
+            newUserName = string.Empty;
+        }
     }
 
     // Data is collected from the database and displayed in the chatwindow. Populates mychat.Messages with previous messages.
@@ -91,39 +91,27 @@
         }
     }
 
-    // newInputMessage is saved to the database by the method generating and executing an SQL-string.
-    // A prompt to Llama is posted with AddPrompt()
-    // Llamas response is displayed as a new chatmessage in the chatwindow.
+
     public void AddInputMessage()
     {
-        if (!string.IsNullOrWhiteSpace(newInputMessage))
+        if (currentUser != null && !string.IsNullOrWhiteSpace(newInputMessage))
         {
-            // Depending on the choice in the dropdown-menu its decided which user who sends the message.
-            User currentUser = selectedUser == "user1" ? user1 :
-                               selectedUser == "user2" ? user2 :
-                               selectedUser == "user3" ? user3 :
-                               user4;
-            long mychatId = DataBase.CheckChatTable("mychat");
             long userId = DataBase.CheckUserTable(currentUser.Name);
+            if (userId == 1)
+            {
+                userId = DataBase.CreateUser(currentUser.Name);
+            }
 
-            // CreateMessage() in mychat is called and creates a new message.
+            long mychatId = DataBase.CheckChatTable("mychat");
             mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
-
             string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
-
             DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
 
             AddPrompt();
-
-            // The inputfield is emptied when the message has been sent.
             newInputMessage = string.Empty;
         }
-    } 
+    }
 
-    public string? newPrompt;
-
-    // newInputMessage is posted to Llama with PostStuff() and a chat message is created from the result (answer) from Llama. 
-    // The result is also saved ion the database.
     public async Task AddPrompt()
     {
         if (!string.IsNullOrWhiteSpace(newInputMessage))
