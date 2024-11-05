@@ -20,7 +20,7 @@
 <button @onclick="AddPrompt">Send prompt</button>
 
 
-
+@*Field with Llamas response*@
 @if (!string.IsNullOrEmpty(result))
 {
     <p>Result:</p>
@@ -32,6 +32,7 @@
 
     public string? newPrompt;
 
+    // Send the users prompt to server.
     public void AddPrompt()
     {
         if (!string.IsNullOrWhiteSpace(newPrompt))
@@ -41,7 +42,7 @@
         }
     }
 
-
+    // Http-client configuration to communicate with API-server.
     private string? result;
     private static HttpClient httpClient = new()
         {
@@ -60,10 +61,11 @@
         await PostAsync(httpClient);
     }
 
-
+    // Fetches information about the Llama model via a GET request.
     static async Task GetAsync(HttpClient httpClient)
     {
-        try{
+        try
+        {
             using HttpResponseMessage response = await httpClient.GetAsync("api/tags");
             response.EnsureSuccessStatusCode();
 
@@ -75,10 +77,10 @@
             string result = $"Error: {ex.Message}";
             Console.WriteLine($"Error: {ex.Message}");
         }
-
     }
 
-
+    // Sends the users prompt to the server via a POST request and if success - stream the response.
+    // Iterates the answer and extracts the response. The result is displayed in the user interface efter it has been processed and updated.
     private async Task PostAsync(HttpClient httpClient)
     {
         using StringContent jsonContent = new(
