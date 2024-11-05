@@ -39,7 +39,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex) 
                 {
-                    Console.WriteLine("Ett fel uppstod:" + ex.ToString());
+                    Console.WriteLine("An error has occured:" + ex.ToString());
                 }
                 return chatId;
             }
@@ -70,7 +70,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Ett fel uppstod" + ex.ToString());
+                    Console.WriteLine("An error has occured" + ex.ToString());
                 }
             }
             return chatId;
@@ -107,7 +107,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Ett fel har inträffat" + ex.ToString());
+                    Console.WriteLine("An error has occured" + ex.ToString());
                 }
             }
             return userId;
@@ -139,7 +139,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Ett fel uppstod" + ex.ToString());
+                    Console.WriteLine("An error has occured" + ex.ToString());
                 }
             }
             return userId;
@@ -189,7 +189,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Ett fel uppstod" + ex.ToString());
+                    Console.WriteLine("An error has occured" + ex.ToString());
                 }
             }
         }
