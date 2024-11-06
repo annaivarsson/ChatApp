@@ -182,7 +182,7 @@ else
             "application/json");
 
         StringBuilder fullResponse = new();
-        
+
 
         try
         {
@@ -217,12 +217,12 @@ else
 
             if (isResponseComplete)
             {
-                result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
+                result = fullResponse.ToString();
                 Console.WriteLine($"Full Response after processing: {result}");
                 StateHasChanged();
             }
-
-
+            result = fullResponse.ToString();
+            StateHasChanged();
         }
         catch (Exception ex)
         {

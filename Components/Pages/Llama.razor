@@ -11,9 +11,9 @@
 <h3>Ask Llama something</h3>
 
 
-<p>Here you can either get information on the local Llama model or ask Llama a question.</p>
+<p>Here you can either list local Llama models or ask Llama a question.</p>
 
-<button type="button" @onclick="DoStuff">Get Llama model information</button>
+<button type="button" @onclick="DoStuff">List local Llama models</button>
 
 
 <input type="text" placeholder="Write your prompt to Llama" @bind="newPrompt" />
@@ -79,8 +79,8 @@
         }
     }
 
-    // Sends the users prompt to the server via a POST request and if success - stream the response.
-    // Iterates the answer and extracts the response. The result is displayed in the user interface efter it has been processed and updated.
+    // Sends the users prompt to the server via a POST request and if success - streams the response.
+    // Iterates the answer and extracts the response. The result is displayed in the user interface after it has been processed and updated.
     private async Task PostAsync(HttpClient httpClient)
     {
         using StringContent jsonContent = new(
@@ -116,11 +116,12 @@
 
                 if (!string.IsNullOrWhiteSpace(responseText))
                 {
-                    fullResponse.AppendLine(responseText.Trim());
+                    
+                    fullResponse.Append(responseText);
 
                 }
             }
-            result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
+            result = fullResponse.ToString();
             StateHasChanged();
 
         }

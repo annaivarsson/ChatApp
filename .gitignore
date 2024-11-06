@@ -27,16 +27,33 @@ appsettings.Development.json
 appsettings.*.json
 secrets.json
 
-# Build output
+# Build output (Blazor WebAssembly)
 wwwroot/index.html
 wwwroot/css/app.css
 wwwroot/css/app.bundle.css
 wwwroot/js/app.js
 wwwroot/js/app.bundle.js
 
+# Cache for WebAssembly projects
+dist/
+publish/
+
 # Logs
 *.log
 
-# Others
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.Trash-*
+
+# Only for production
+/Properties/launchSettings.json
