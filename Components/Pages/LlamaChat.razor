@@ -120,7 +120,7 @@ else
 
             long mychatId = DataBase.CheckChatTable("mychat");
             long userId = DataBase.CheckUserTable(user4.Name);
-            
+
 
             mychat.CreateMessage(user4, result, "mychat", mychatId, DateTime.Now);
 
@@ -181,6 +181,9 @@ else
             Encoding.UTF8,
             "application/json");
 
+        StringBuilder fullResponse = new();
+        
+
         try
         {
             using HttpResponseMessage response = await httpClient.PostAsync("api/generate", jsonContent);
@@ -189,24 +192,36 @@ else
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
-
-            StringBuilder fullResponse = new();
             string? line;
+
+            bool isResponseComplete = false;
 
             while ((line = await reader.ReadLineAsync()) != null)
             {
                 Console.WriteLine($"API response Line: {line}");
                 var jsonDoc = JsonDocument.Parse(line);
                 var responseText = jsonDoc.RootElement.GetProperty("response").GetString();
+                bool isDone = jsonDoc.RootElement.GetProperty("done").GetBoolean();
 
                 if (!string.IsNullOrWhiteSpace(responseText))
                 {
-                    fullResponse.AppendLine(responseText.Trim());
+                    fullResponse.Append(responseText);
+                }
+
+                if (isDone)
+                {
+                    isResponseComplete = true;
+                    break;
                 }
             }
-            result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
-            Console.WriteLine($"Full Response after processing: {result}");
-            StateHasChanged();
+
+            if (isResponseComplete)
+            {
+                result = Regex.Replace(fullResponse.ToString(), @"\s+", " ").Trim();
+                Console.WriteLine($"Full Response after processing: {result}");
+                StateHasChanged();
+            }
+
 
         }
         catch (Exception ex)
