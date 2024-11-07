@@ -97,7 +97,7 @@ else
         if (currentUser != null && !string.IsNullOrWhiteSpace(newInputMessage))
         {
             long userId = DataBase.CheckUserTable(currentUser.Name);
-            if (userId == 1)
+            if (userId == -1)
             {
                 userId = DataBase.CreateUser(currentUser.Name);
             }

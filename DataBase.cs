@@ -189,7 +189,7 @@ namespace RealChatApp
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("An error has occured" + ex.ToString());
+                    Console.WriteLine("An error occured in RunTransaction" + ex.ToString());
                 }
             }
         }

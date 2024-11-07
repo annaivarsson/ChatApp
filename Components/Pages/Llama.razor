@@ -106,11 +106,7 @@
 
             while ((line = await reader.ReadLineAsync()) != null)
             {
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(line);
-                if (apiResponse != null && !string.IsNullOrWhiteSpace(apiResponse.Response))
-                {
-                    fullResponse.AppendLine(apiResponse.Response.Trim());
-                }
+
                 var jsonDoc = JsonDocument.Parse(line);
                 var responseText = jsonDoc.RootElement.GetProperty("response").GetString();
 
