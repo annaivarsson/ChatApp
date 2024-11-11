@@ -44,16 +44,19 @@ else
 }
 
 @code {
-    User user4 = new User("Llama");
-    public List<User> userList = new List<User>();
-    public string selectedUser;
-    public Chat mychat;
-    public int mychatId = 1;
+    DataBase db = new DataBase();
     public string? newUserName;
     public string? newInputMessage;
     public bool isUserNameSet = false;
     public User? currentUser;
 
+    // Llama is a fixed non-editable user for responses
+    public User Llama = new User("Llama", 4);
+
+    public List<User> userList = new List<User>();
+    public string selectedUser;
+    public Chat mychat;
+    public int mychatId = 1;
 
     protected override void OnInitialized()
     {
@@ -61,33 +64,58 @@ else
         LoadData(mychatId);
     }
 
-    private void SetUserName()
+    public void InitializeUser(string username)
     {
-        if (!string.IsNullOrWhiteSpace(newUserName))
-        {
-            currentUser = new User(newUserName);
-            isUserNameSet = true;
-            newUserName = string.Empty;
-        }
+        DataBase dataBase = new DataBase();
+        long userId = db.GetUserId(username);
+        Llama = new User(username, userId);
     }
+
 
     // Data is collected from the database and displayed in the chatwindow. Populates mychat.Messages with previous messages.
     public void LoadData(long chatId)
     {
-        System.Data.DataTable dt = DataBase.Fetchmessages(chatId);
+        DataBase db = new DataBase();
+        System.Data.DataTable dt = db.Fetchmessages(chatId);
 
         foreach (DataRow row in dt.Rows)
         {
-            User user = new User(row["username"].ToString());
-
             string TextMessage = row["message"].ToString();
-            User Sender = user;
             long ChatID = Convert.ToInt64(row["chat_id"]);
             DateTime Date = (DateTime)row["message_sent"];
             string ChatName = row["chatname"].ToString();
+            string username = row["username"].ToString();
+            long userid = Convert.ToInt64(row["user_id"]);
+            if (string.IsNullOrWhiteSpace("username"))
+            {
+                Console.WriteLine("username is null or whitespace");
+            }
+
+            User user = new User(row["username"].ToString(), Convert.ToInt64(row["user_id"]));
+            User Sender = user;
+
             Message messageFromRow = new Message(Sender, TextMessage, ChatName, ChatID, Date);
+
             mychat.Messages.Add(messageFromRow);
             mychat.Users.Add(user);
+        }
+    }
+
+
+    private void SetUserName()
+    {
+        if (!string.IsNullOrWhiteSpace(newUserName) && newUserName != "Llama")
+        {
+            DataBase db = new DataBase();
+
+            long userId = db.GetUserId(newUserName);
+            currentUser = new User(newUserName, userId);
+            isUserNameSet = true;
+            newUserName = string.Empty;
+        }
+        else
+        {
+            Console.WriteLine("You can not use 'Llama' as your username!");   
         }
     }
 
@@ -96,38 +124,41 @@ else
     {
         if (currentUser != null && !string.IsNullOrWhiteSpace(newInputMessage))
         {
-            long userId = DataBase.CheckUserTable(currentUser.Name);
+            DataBase db = new DataBase();
+
+            long mychatId = db.GetChatId("mychat");
+            long userId = db.GetUserId(currentUser.Name);
             if (userId == -1)
             {
-                userId = DataBase.CreateUser(currentUser.Name);
+                userId = db.CreateUser(currentUser.Name);
             }
 
-            long mychatId = DataBase.CheckChatTable("mychat");
             mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
-            string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
-            DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
+            string generatedSqlString = db.GenerateSqlString("mychat", currentUser.Name, "messageText");
+            db.InsertChatMessage(generatedSqlString, userId, newInputMessage, mychatId);
 
             AddPrompt();
             newInputMessage = string.Empty;
         }
     }
 
+
     public async Task AddPrompt()
     {
         if (!string.IsNullOrWhiteSpace(newInputMessage))
         {
-            await PostStuff();
+            await PostRequest();
 
-            long mychatId = DataBase.CheckChatTable("mychat");
-            long userId = DataBase.CheckUserTable(user4.Name);
+            DataBase db = new DataBase();
 
+            long mychatId = db.GetChatId("mychat");
 
-            mychat.CreateMessage(user4, result, "mychat", mychatId, DateTime.Now);
+            mychat.CreateMessage(Llama, result, "mychat", mychatId, DateTime.Now);
 
             StateHasChanged();
 
-            string generatedLlamaSqlString = DataBase.GenerateSqlString("mychat", user4.Name, result);
-            DataBase.RunTransaction(generatedLlamaSqlString, 4, result, mychatId);
+            string generatedLlamaSqlString = db.GenerateSqlString("mychat", Llama.Name, result);
+            db.InsertChatMessage(generatedLlamaSqlString, 4, result, mychatId);
         }
     }
 
@@ -140,7 +171,7 @@ else
         };
 
     // Performs POST requests to the Llama API.
-    public async Task PostStuff()
+    public async Task PostRequest()
     {
         await PostAsync(httpClient);
     }

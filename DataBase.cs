@@ -6,212 +6,236 @@ namespace RealChatApp
 {
     public class DataBase
     {
-        // Method that controls if there already is a chat in Chat table.
-        public static long CheckChatTable(string chatName)
+        private readonly string ConnStr;
+
+
+        public DataBase() 
         {
-            long chatId = -1;// If a chat is found the method will retur´n the chat_id, if not found -1 is returned.
-
-            // Create a password string for env variables.
             string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
-
-            // Connection string to the database is created.
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            using (MySqlConnection conn = new MySqlConnection(connStr))
-            {
-                try
-                {
-                    conn.Open();
-
-                    // Checks if chatName is present in the Chat table. If present: chat_id is reused, otherwise a new chat is created.
-                    string sqlCheckChat = "SELECT chat_id FROM Chat WHERE chatname = @chatName";
-
-                    MySqlCommand cmdCheckChat = new MySqlCommand(sqlCheckChat, conn); 
-
-                    cmdCheckChat.Parameters.AddWithValue("@chatName", chatName); 
-
-                    object chatIdObj = cmdCheckChat.ExecuteScalar(); 
-
-                    if (chatIdObj != null)
-                    {
-                        chatId = Convert.ToInt64(chatIdObj);
-                    }
-                }
-                catch (Exception ex) 
-                {
-                    Console.WriteLine("An error has occured:" + ex.ToString());
-                }
-                return chatId;
-            }
+            ConnStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
         }
 
-        public static long CreateChat(string chatName)
+
+        // Method that controls if there already is a chat in Chat table. Testar nu######################
+        public MySqlConnection CreateConnection()
         {
-            long chatId = -1; 
+            MySqlConnection conn = new MySqlConnection(ConnStr);
+            conn.Open();
+            return conn;
+        }
 
-            string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
 
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            using (MySqlConnection conn = new MySqlConnection(connStr))
+        public long GetChatId(string chatName)
+        {
+            long chatId = -1;
+            
+            try
             {
-                try
+                using (MySqlConnection conn = CreateConnection())
                 {
-                    conn.Open();
-                    string sqlChat = "INSERT INTO Chat (chatname, chat_created) VALUES (@chatName, NOW())";
+                    string sqlGetChatId = @"
+                        SELECT 
+                            chat_id 
+                        FROM 
+                            Chat 
+                        WHERE
+                            chatname = @chatName";
+                    using (MySqlCommand cmdGetChatId = new MySqlCommand(sqlGetChatId, conn))
+                    {
+                        cmdGetChatId.Parameters.AddWithValue("@chatName", chatName);
+                        object chatIdObj = cmdGetChatId.ExecuteScalar();
 
-                    MySqlCommand cmdChat = new MySqlCommand(sqlChat, conn);
-
-                    cmdChat.Parameters.AddWithValue("@chatName", chatName); 
-
-                    cmdChat.ExecuteNonQuery();
-
-                    chatId = cmdChat.LastInsertedId;
+                        if (chatIdObj != null)
+                        {
+                            chatId = Convert.ToInt64(chatIdObj);
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("An error has occured" + ex.ToString());
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error has occurred in GetUserId():" + ex.ToString());
             }
             return chatId;
         }
 
 
-
-        public static long CheckUserTable(string userName)
-        {
-            long userId = -1; 
-
-            string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
-
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            using (MySqlConnection conn = new MySqlConnection(connStr))
+        public long CreateChat(string chatName)
+        { 
+            long chatId = -1;
+            try
             {
-                try
+                using (MySqlConnection conn = CreateConnection())
                 {
-                    conn.Open();
+                    string sqlChat = @"
+                        INSERT INTO 
+                            Chat (chatname, chat_created) 
+                        VALUES 
+                            (@chatName, NOW())";
 
-                    string sqlCheckUser = "SELECT user_id FROM Users WHERE username = @userName";
-
-                    MySqlCommand cmdCheckUser = new MySqlCommand(sqlCheckUser, conn);
-
-                    cmdCheckUser.Parameters.AddWithValue("@userName", userName);
-
-                    object userIdObj = cmdCheckUser.ExecuteScalar();
-
-                    if (userIdObj != null)
-                    {
-                        userId = Convert.ToInt64(userIdObj);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("An error has occured" + ex.ToString());
+                    using MySqlCommand cmdCreateChat = new MySqlCommand(sqlChat, conn);
+                    cmdCreateChat.Parameters.AddWithValue("@chatName", chatName);
+                    cmdCreateChat.ExecuteNonQuery();
+                    chatId = cmdCreateChat.LastInsertedId;
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error has occured in CreateChat():" + ex.ToString());
+            }
+            return chatId;
+        }
+
+
+        public long? FetchUserIdFromDatabase(string username)
+        {
+            string sqlFetchUserId = @"
+                            SELECT
+                                user_id
+                            FROM
+                                Users
+                            WHERE
+                                username = @username";
+            using (MySqlConnection conn = CreateConnection())
+            {
+                using (MySqlCommand cmd = new MySqlCommand(sqlFetchUserId, conn))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    try
+                    {
+                        object userIdObject = cmd.ExecuteScalar();
+
+                        if (userIdObject != null)
+                        {
+                            return Convert.ToInt64(userIdObject);
+                        }
+                        else
+                        {
+                            Console.WriteLine("The user was not found");
+                            return null;
+                        }
+                    }
+                    catch (Exception ex) 
+                    {
+                        Console.WriteLine($"An error occured in FetchUserIdFromDatabase(): {ex.Message}");
+                        return null;
+                    }
+                }
+            }
+        }
+
+
+        public long GetUserId(string userName)
+        {
+            long userId = FetchUserIdFromDatabase(userName) ?? CreateUser(userName);
             return userId;
         }
 
-        public static long CreateUser(string userName)
+
+        public long CreateUser(string userName)
         {
             long userId = -1;
 
-            string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
-
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            using (MySqlConnection conn = new MySqlConnection(connStr))
+            try
             {
-                try
+                using (MySqlConnection conn = CreateConnection())
                 {
-                    conn.Open();
-
-                    string sqlUser = "INSERT INTO Users (username, created_at) VALUES (@userName, NOW())";
+                    string sqlUser = @"
+                        INSERT INTO 
+                            Users (username, created_at) 
+                        VALUES 
+                            (@userName, NOW())";
 
                     MySqlCommand cmdUser = new MySqlCommand(sqlUser, conn);
-
                     cmdUser.Parameters.AddWithValue("@userName", userName);
-
                     cmdUser.ExecuteNonQuery();
-
                     userId = cmdUser.LastInsertedId;
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("An error has occured" + ex.ToString());
-                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("An error has occurred in CreateUser()" + ex.ToString());
             }
             return userId;
         }
 
 
-        public static string GenerateSqlString(string chatName, string userName, string messageText)
+        public string GenerateSqlString(string chatName, string userName, string messageText)
         {
-            long chatId = CheckChatTable(chatName);
+            long chatId = GetChatId(chatName);
+
             if (chatId == -1)
             {
                 chatId = CreateChat(chatName);
             }
 
-            long userId = CheckUserTable(userName);
+            long userId = GetUserId(userName);
+
             if (userId == -1)
             {
                 userId = CreateUser(userName);
             }
-            string sqlMessage = "INSERT INTO Messages (user_id, message, chat_id, message_sent) VALUES (@userId, @messageText, @chatId, NOW())";
+
+            string sqlMessage = @"
+                INSERT INTO 
+                    Messages (user_id, message, chat_id, message_sent) 
+                VALUES 
+                    (@userId, @messageText, @chatId, NOW())";
 
             return sqlMessage;
         }
 
 
-
         // Coordinates check and create. Creates a new chat and user if they already not exist, also adds a message.
-        public static void RunTransaction(string sqlMessage, long userId, string messageText, long chatId)
+        public void InsertChatMessage(string sqlMessage, long userId, string messageText, long chatId)
         {
-            string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
-
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            using (MySqlConnection conn = new MySqlConnection(connStr))
+            using (MySqlConnection conn = CreateConnection())
             {
                 try
                 {
-                    conn.Open();
-
                     using (MySqlCommand cmdMessages = new MySqlCommand(sqlMessage, conn))
                     {
                         cmdMessages.Parameters.AddWithValue("@userId", userId);
                         cmdMessages.Parameters.AddWithValue("@messageText", messageText);
                         cmdMessages.Parameters.AddWithValue("@chatId", chatId);
+
                         cmdMessages.ExecuteNonQuery();
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("An error occured in RunTransaction" + ex.ToString());
+                    Console.WriteLine("An error occurred in InsertChatMessage" + ex.ToString());
                 }
             }
         }
 
 
-        public static DataTable Fetchmessages(long chatId)
+        // Fetches historical chat messages and populates the chat window.
+        public DataTable Fetchmessages(long chatId)
         {
-            string password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+            string sqlFetchJoinMessagesChatAndUsers = @$"
+                SELECT
+                    Messages.user_id, Messages.message, Messages.chat_id, Messages.message_sent, Chat.chatname, Users.username 
+                FROM 
+                    Chat 
+                INNER JOIN Messages ON Chat.chat_id = Messages.chat_id 
+                INNER JOIN Users ON Users.user_id = Messages.user_id 
+                WHERE Chat.chat_id = @chatId
+                ORDER BY Messages.message_sent";
 
-            string connStr = $"server=localhost;user=root;database=new_schema;port=3306;password={password}";
-
-            string sqlFetchJoinMessagesChatAndUsers = $"SELECT Messages.user_id, Messages.message, Messages.chat_id, Messages.message_sent, Chat.chatname, Users.username FROM Chat JOIN Messages ON Chat.chat_id = Messages.chat_id JOIN Users ON Users.user_id = Messages.user_id ORDER BY Messages.message_sent";
-
-            MySqlConnection conn = new MySqlConnection(connStr);
-
-            MySqlDataAdapter Adapter = new MySqlDataAdapter(sqlFetchJoinMessagesChatAndUsers, conn);
-                
-                    MySqlCommandBuilder cb = new MySqlCommandBuilder(Adapter);
-                    
+            using (MySqlConnection conn = CreateConnection())
+            {
+                using (MySqlCommand cmd = new MySqlCommand(sqlFetchJoinMessagesChatAndUsers, conn))
+                { 
+                    cmd.Parameters.AddWithValue("@chatId", chatId);
+                    MySqlDataAdapter Adapter = new MySqlDataAdapter(cmd);
                     DataTable dt = new DataTable();
                     Adapter.Fill(dt);
-                    return dt;    
+
+                    return dt;
+                }
+            }
         }
     }
 }

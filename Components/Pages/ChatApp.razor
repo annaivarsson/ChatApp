@@ -46,53 +46,71 @@ else
     public Chat mychat;
     public int mychatId = 1;
 
-
+    // Populates the chat window with data from the database.
     protected override void OnInitialized()
     {
         mychat = new Chat();
         LoadData(mychatId);
     }
 
+    // Loads data from the database. 
     public void LoadData(long chatId)
     {
-        System.Data.DataTable dt = DataBase.Fetchmessages(chatId);
+        DataBase db = new DataBase();
+        System.Data.DataTable dt = db.Fetchmessages(chatId);
 
         foreach (DataRow row in dt.Rows)
         {
-            User user = new User(row["username"].ToString());
             string TextMessage = row["message"].ToString();
-            User Sender = user;
             long ChatID = Convert.ToInt64(row["chat_id"]);
             DateTime Date = (DateTime)row["message_sent"];
-            string ChatName = row["chatname"].ToString(); 
+            string ChatName = row["chatname"].ToString();
+            string username = row["username"].ToString();
+            long userid = Convert.ToInt64(row["user_id"]);
+            if (string.IsNullOrWhiteSpace("username"))
+            {
+                Console.WriteLine("username is null or whitespace");
+            }
+
+            User user = new User(row["username"].ToString(), Convert.ToInt64(row["user_id"]));
+            User Sender = user;
+
             Message messageFromRow = new Message(Sender, TextMessage, ChatName, ChatID, Date);
+
             mychat.Messages.Add(messageFromRow);
             mychat.Users.Add(user);
         }    
     }
 
-
+    // Sets the users username when button is used.
     public void SetUserName()
     {
         if (!string.IsNullOrWhiteSpace(newUserName))
         {
-            currentUser = new User(newUserName);
+            DataBase db = new DataBase();
+
+            long userId = db.GetUserId(newUserName);
+
+            currentUser = new User(newUserName, userId);
             isUserNameSet = true;
+
             newUserName = string.Empty;
         }
     }
 
+    // Saves the users input message to the database and the chat window when the button is used.
     public void AddInputMessage()
     {
         if (currentUser != null && !string.IsNullOrWhiteSpace(newInputMessage))
         {
-            long mychatId = DataBase.CheckChatTable("mychat");
-            long userId = DataBase.CheckUserTable(currentUser.Name);
+            DataBase db = new DataBase();
+            long mychatId = db.GetChatId("mychat");
+            long userId = db.GetUserId(currentUser.Name);
 
             mychat.CreateMessage(currentUser, newInputMessage, "mychat", mychatId, DateTime.Now);
 
-            string generatedSqlString = DataBase.GenerateSqlString("mychat", currentUser.Name, "messageText");
-            DataBase.RunTransaction(generatedSqlString, userId, newInputMessage, mychatId);
+            string generatedSqlString = db.GenerateSqlString("mychat", currentUser.Name, "messageText");
+            db.InsertChatMessage(generatedSqlString, userId, newInputMessage, mychatId);
 
             newInputMessage = string.Empty;
         }

@@ -13,7 +13,7 @@
 
 <p>Here you can either list local Llama models or ask Llama a question.</p>
 
-<button type="button" @onclick="DoStuff">List local Llama models</button>
+<button type="button" @onclick="GetModelInfo">List local Llama models</button>
 
 
 <input type="text" placeholder="Write your prompt to Llama" @bind="newPrompt" />
@@ -37,12 +37,12 @@
     {
         if (!string.IsNullOrWhiteSpace(newPrompt))
         {
-            PostStuff();
+            PostRequest();
             newPrompt = string.Empty;
         }
     }
 
-    // Http-client configuration to communicate with API-server.
+    // Http-client configuration to communicate with the API-server.
     private string? result;
     private static HttpClient httpClient = new()
         {
@@ -51,17 +51,17 @@
         };
 
 
-    public async Task DoStuff()
+    public async Task GetModelInfo()
     {
         await GetAsync(httpClient);
     }
 
-    public async Task PostStuff()
+    public async Task PostRequest()
     {
         await PostAsync(httpClient);
     }
 
-    // Fetches information about the Llama model via a GET request.
+    // Fetches information about the Llama model using a GET request.
     static async Task GetAsync(HttpClient httpClient)
     {
         try
@@ -100,13 +100,11 @@
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
-
             StringBuilder fullResponse = new();
             string? line;
 
             while ((line = await reader.ReadLineAsync()) != null)
             {
-
                 var jsonDoc = JsonDocument.Parse(line);
                 var responseText = jsonDoc.RootElement.GetProperty("response").GetString();
 
