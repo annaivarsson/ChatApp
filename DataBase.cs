@@ -16,7 +16,7 @@ namespace RealChatApp
         }
 
 
-        // Method that controls if there already is a chat in Chat table. Testar nu######################
+        // Method that controls if there already is a chat in Chat table. 
         public MySqlConnection CreateConnection()
         {
             MySqlConnection conn = new MySqlConnection(ConnStr);
@@ -214,9 +214,14 @@ namespace RealChatApp
         // Fetches historical chat messages and populates the chat window.
         public DataTable Fetchmessages(long chatId)
         {
-            string sqlFetchJoinMessagesChatAndUsers = @$"
+            string sqlFetchJoinMessagesChatAndUsers = @"
                 SELECT
-                    Messages.user_id, Messages.message, Messages.chat_id, Messages.message_sent, Chat.chatname, Users.username 
+                    Messages.user_id, 
+                    Messages.message, 
+                    Messages.chat_id, 
+                    Messages.message_sent,
+                    Chat.chatname, 
+                    Users.username 
                 FROM 
                     Chat 
                 INNER JOIN Messages ON Chat.chat_id = Messages.chat_id 

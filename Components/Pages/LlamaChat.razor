@@ -176,7 +176,7 @@ else
         await PostAsync(httpClient);
     }
 
-    // prompts is sent to LLama and a response is generated using this method.
+    // prompt is sent to Llama and a response is generated using this method.
     private async Task PostAsync(HttpClient httpClient)
     {
         using StringContent jsonContent = new(
